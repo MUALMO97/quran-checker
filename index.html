@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>مصحح التلاوة</title>
+<style>
+body{font-family:sans-serif;background:#0b1220;color:#eee;margin:0;padding:16px;text-align:center}
+#text{font-size:28px;line-height:2.4;margin:20px 0}
+.w{display:inline-block;margin:0 5px;color:#777}
+.ok{color:#3ddc84}
+.bad{color:#ff5252;text-decoration:underline}
+button{font-size:20px;padding:12px 28px;border:0;border-radius:12px;background:#2e7d32;color:#fff}
+#msg{margin-top:12px;color:#aaa}
+</style>
+</head>
+<body>
+<h2>مصحح التلاوة - سورة الإخلاص</h2>
+<div id="text"></div>
+<button id="btn">ابدأ القراءة</button>
+<div id="msg"></div>
+<script>
+const verses=["قُلْ هُوَ اللَّهُ أَحَدٌ","اللَّهُ الصَّمَدُ","لَمْ يَلِدْ وَلَمْ يُولَدْ","وَلَمْ يَكُن لَّهُ كُفُوًا أَحَدٌ"];
+const words=verses.join(" ").split(" ");
+const norm=s=>s.replace(/[\u064B-\u065F\u0670\u0640]/g,"").replace(/[أإآٱ]/g,"ا").replace(/ى/g,"ي").replace(/ة/g,"ه").trim();
+const exp=words.map(norm);
+const box=document.getElementById("text");
+const spans=words.map(w=>{const s=document.createElement("span");s.className="w";s.textContent=w;box.appendChild(s);return s;});
+const msg=document.getElementById("msg"),btn=document.getElementById("btn");
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+if(!SR){msg.textContent="المتصفح لا يدعم التعرف الصوتي. استخدم Chrome."}
+let rec,running=false,lastBad=0;
+function update(text){
+ const heard=text.split(/\s+/).map(norm).filter(Boolean);
+ let bad=0;
+ spans.forEach((s,i)=>{
+  if(i<heard.length){const ok=heard[i]===exp[i];s.className="w "+(ok?"ok":"bad");if(!ok)bad++;}
+  else s.className="w";
+ });
+ if(bad>lastBad&&navigator.vibrate)navigator.vibrate(300);
+ lastBad=bad;
+ msg.textContent="سمعت: "+text;
+}
+btn.onclick=()=>{
+ if(!SR)return;
+ if(running){rec.stop();return;}
+ rec=new SR();rec.lang="ar-SA";rec.continuous=true;rec.interimResults=true;
+ rec.onresult=e=>{let t="";for(let i=0;i<e.results.length;i++)t+=e.results[i][0].transcript+" ";update(t);};
+ rec.onend=()=>{running=false;btn.textContent="ابدأ القراءة";};
+ rec.onerror=e=>{msg.textContent="خطأ: "+e.error;};
+ lastBad=0;update("");rec.start();running=true;btn.textContent="إيقاف";
+};
+</script>
+</body>
+</html>
